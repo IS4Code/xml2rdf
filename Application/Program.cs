@@ -188,6 +188,8 @@ namespace IS4.RDF.Converters.Application
                 }
                 using(var reader = new StreamReader(OpenInput(file.TargetPath), true))
                 {
+                    var baseUri = GetBaseUri(file.TargetPath);
+                    graph.BaseUri = baseUri != null ? new Uri(baseUri) : null;
                     rdfReader.Load(graph, reader);
                 }
             }
@@ -197,7 +199,11 @@ namespace IS4.RDF.Converters.Application
                 case ResourceFormat.Xml:
                     using(var writer = XmlWriter.Create(OpenOutput(output.TargetPath), XmlWriterSettings))
                     {
-                        var root = graph.CreateUriNode(GetBaseUri(output.TargetPath));
+                        var root = graph.CreateUriNode(new Uri(GetBaseUri(output.TargetPath)));
+                        if(!graph.GetTriplesWithSubject(root).Any())
+                        {
+                            throw new ApplicationException("Base URI must refer to an existing root!");
+                        }
                         switch(OutputRdfBrowsingMethod)
                         {
                             case RdfBrowsingMethod.Writer:
