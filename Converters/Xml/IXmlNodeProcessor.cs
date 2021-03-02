@@ -4,12 +4,12 @@ using System.Xml;
 
 namespace IS4.RDF.Converters.Xml
 {
-    public interface IXmlNodeProcessor<TNode, TUriNode> : IDisposable where TUriNode : TNode
+    public interface IXmlNodeProcessor<TNode> : IDisposable
     {
-        TUriNode ProcessDocument<TProvider>(TProvider provider, Func<TUriNode, IEnumerator<TNode>> content)
+        TNode ProcessDocument<TProvider>(TProvider provider, Func<TNode, IEnumerator<TNode>> content)
             where TProvider : IBaseUriProvider;
 
-        void ProcessDocumentType(string publicId, string systemId, string internalSubset, bool useAsNamespace, TUriNode baseNode, ref TUriNode defaultNamespace);
+        void ProcessDocumentType(string publicId, string systemId, string internalSubset, bool useAsNamespace, TNode baseNode, ref TNode defaultNamespace);
 
         TNode ProcessWhitespace<TProvider>(TProvider provider, bool significant)
             where TProvider : ILanguageProvider, IXmlValueProvider;
@@ -20,10 +20,10 @@ namespace IS4.RDF.Converters.Xml
         TNode ProcessComment<TProvider>(TProvider provider)
             where TProvider : ILanguageProvider, IXmlValueProvider;
 
-        TNode ProcessProcessingInstruction<TProvider>(TProvider provider, TUriNode defaultNamespace)
+        TNode ProcessProcessingInstruction<TProvider>(TProvider provider, TNode defaultNamespace)
             where TProvider : IXmlNameProvider, IXmlValueProvider, IBaseUriProvider;
 
-        TNode ProcessElement<TProvider>(TProvider provider, TUriNode baseNode, Uri originalBaseUri, TUriNode defaultNamespace, Func<TUriNode, IEnumerator<TNode>> content)
+        TNode ProcessElement<TProvider>(TProvider provider, TNode baseNode, Uri originalBaseUri, TNode defaultNamespace, Func<TNode, IEnumerator<TNode>> content)
             where TProvider : IBaseUriProvider, ILanguageProvider, IXmlAttributeProvider, IXmlNamespaceResolver;
 
         TNode ProcessEntityReference<TProvider>(TProvider provider)

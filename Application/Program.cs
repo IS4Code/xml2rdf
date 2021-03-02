@@ -129,14 +129,14 @@ namespace IS4.RDF.Converters.Application
 
             var graph = new Graph();
             var converter = new XmlNodeConverter();
-            using(var processor = new XmlRdfProcessor(graph, ProcessingXmlResolver as XmlPlaceholderResolver)
+            foreach(var file in input)
             {
-                WhitespaceHandling = WhitespaceHandling,
-                ExportDefault = ExportDefault ?? false,
-                UseDtdAsDefaultNamespace = UsePublic ?? true
-            })
-            {
-                foreach(var file in input)
+                using(var processor = new XmlRdfProcessor(graph, ProcessingXmlResolver as XmlPlaceholderResolver)
+                {
+                    WhitespaceHandling = WhitespaceHandling,
+                    ExportDefault = ExportDefault ?? false,
+                    UseDtdAsDefaultNamespace = UsePublic ?? true
+                })
                 {
                     switch(file.Format)
                     {

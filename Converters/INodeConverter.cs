@@ -4,6 +4,6 @@ namespace IS4.RDF.Converters
 {
     public interface INodeConverter<TInput>
     {
-        TNode Convert<TNode, TUriNode>(TInput input, IXmlNodeProcessor<TNode, TUriNode> processor) where TUriNode : TNode;
+        TNode Convert<TNode>(TInput input, IXmlNodeProcessor<TNode> processor);
     }
 }

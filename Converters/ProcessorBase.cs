@@ -19,6 +19,7 @@ namespace IS4.RDF.Converters
         internal static readonly Uri XMLLiteral = new Uri(rdfNS + "XMLLiteral");
         internal static readonly Uri langString = new Uri(rdfNS + "langString");
         internal static readonly Uri xstring = new Uri(xsdNS + "string");
+        internal static readonly Uri anyURI = new Uri(xsdNS + "anyURI");
         internal static readonly Uri NCName = new Uri(xsdNS + "NCName");
         internal static readonly Uri QName = new Uri(xsdNS + "QName");
         internal static readonly Uri xpublic = new Uri(xsdNS + "public");

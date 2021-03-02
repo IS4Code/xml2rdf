@@ -10,15 +10,13 @@ namespace IS4.RDF.Converters
     {
         public bool UseReflection { get; set; } = true;
 
-        public TNode Convert<TNode, TUriNode>(XmlReader reader, IXmlNodeProcessor<TNode, TUriNode> processor)
-            where TUriNode : TNode
+        public TNode Convert<TNode>(XmlReader reader, IXmlNodeProcessor<TNode> processor)
         {
             var wrapper = new XmlReaderWrapper(reader, UseReflection);
             return processor.ProcessDocument(wrapper, documentNode => ReaderContainer(processor, reader, documentNode, default));
         }
         
-        private IEnumerator<TNode> ReaderContainer<TNode, TUriNode>(IXmlNodeProcessor<TNode, TUriNode> processor, XmlReader reader, TUriNode baseNode, TUriNode defaultNamespace)
-             where TUriNode : TNode
+        private IEnumerator<TNode> ReaderContainer<TNode>(IXmlNodeProcessor<TNode> processor, XmlReader reader, TNode baseNode, TNode defaultNamespace)
         {
             var wrapper = new XmlReaderWrapper(reader, UseReflection);
             var originalBaseUri = wrapper.BaseUri;

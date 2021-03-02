@@ -9,20 +9,17 @@ namespace IS4.RDF.Converters
 {
     public class XPathNodeConverter : INodeConverter<IXPathNavigable>, INodeConverter<XPathNavigator>
     {
-        public TNode Convert<TNode, TUriNode>(IXPathNavigable navigable, IXmlNodeProcessor<TNode, TUriNode> processor)
-            where TUriNode : TNode
+        public TNode Convert<TNode>(IXPathNavigable navigable, IXmlNodeProcessor<TNode> processor)
         {
             return Convert(navigable.CreateNavigator(), processor);
         }
 
-        public TNode Convert<TNode, TUriNode>(XPathNavigator navigator, IXmlNodeProcessor<TNode, TUriNode> processor)
-            where TUriNode : TNode
+        public TNode Convert<TNode>(XPathNavigator navigator, IXmlNodeProcessor<TNode> processor)
         {
             return XPathValue(processor, navigator, default, null, default);
         }
 
-        private IEnumerator<TNode> XPathContents<TNode, TUriNode>(IXmlNodeProcessor<TNode, TUriNode> processor, XPathNavigator navigator, TUriNode baseNode, Uri baseUri, TUriNode defaultNamespace)
-             where TUriNode : TNode
+        private IEnumerator<TNode> XPathContents<TNode>(IXmlNodeProcessor<TNode> processor, XPathNavigator navigator, TNode baseNode, Uri baseUri, TNode defaultNamespace)
         {
             if(navigator.MoveToFirstChild())
             {
@@ -34,8 +31,7 @@ namespace IS4.RDF.Converters
             }
         }
 
-        private TNode XPathValue<TNode, TUriNode>(IXmlNodeProcessor<TNode, TUriNode> processor, XPathNavigator navigator, TUriNode baseNode, Uri originalBaseUri, TUriNode defaultNamespace)
-            where TUriNode : TNode
+        private TNode XPathValue<TNode>(IXmlNodeProcessor<TNode> processor, XPathNavigator navigator, TNode baseNode, Uri originalBaseUri, TNode defaultNamespace)
         {
             var wrapper = new XPathNavigatorWrapper(navigator);
             switch(navigator.NodeType)

@@ -100,7 +100,8 @@ namespace IS4.RDF
         public static Uri ComposeUri(Uri baseUri, string component)
         {
             var kind = baseUri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative;
-            return new Uri(baseUri.OriginalString + (baseUri.Fragment?.Length > 0 ? "/" : "#") + component.Replace("/", "%2F"), kind);
+            var uriString = baseUri.GetString();
+            return new Uri(uriString + (uriString.IndexOf('#') != -1 ? "/" : "#") + Uri.EscapeDataString(component), kind);
         }
 
         public static Uri GetNamespacePrefix(Uri uri)
