@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.960
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "xml2rdf", "xml2rdf.csproj", "{C5969267-4668-4F19-9003-F7CB10F46C9C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU Core = Debug|Any CPU Core
+		Debug|Any CPU Standard = Debug|Any CPU Standard
+		Release|Any CPU Core = Release|Any CPU Core
+		Release|Any CPU Standard = Release|Any CPU Standard
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Debug|Any CPU Core.ActiveCfg = Debug|Any CPU
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Debug|Any CPU Core.Build.0 = Debug|Any CPU
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Debug|Any CPU Standard.ActiveCfg = Debug|Any CPU
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Debug|Any CPU Standard.Build.0 = Debug|Any CPU
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Release|Any CPU Core.ActiveCfg = Release|Any CPU
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Release|Any CPU Core.Build.0 = Release|Any CPU
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Release|Any CPU Standard.ActiveCfg = Release|Any CPU
+		{C5969267-4668-4F19-9003-F7CB10F46C9C}.Release|Any CPU Standard.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EF53B096-6080-49A7-A8BC-B3CCC10B7CC3}
+	EndGlobalSection
+EndGlobal

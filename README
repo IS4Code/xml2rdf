@@ -1,0 +1,31 @@
+ xml2rdf v0.1 by IS4
+
+ This applications converts between XML and RDF files.
+
+Usage: xml2rdf [options] [input...] [output]
+
+ -q [ --quiet ]                                        does not print any
+                                                       additional messages
+ -s [ --schema ] [URI]|[path]                          uses schema for a
+                                                       specific namespace
+ -b [ --base-uri ] [URI]                               sets the base URI for
+                                                       conversion
+ -d [ --dtd ] prohibit / ignore / parse                sets input DTD
+                                                       processing
+ -w [ --whitespace ] all / significant / none          sets input whitespace
+                                                       handling
+ -v [ --validation ] none / auto / dtd / xdr / schema  sets input validation
+ -om [ --output-method ] writer / navigator            sets output XML method
+ -ts [ --turtle-syntax ] original / w3c                sets supported Turtle
+                                                       syntax
+ -ed [ --export-default ]                              exports default
+                                                       attributes
+ -up [ --use-public ]                                  uses DTD PUBLIC
+                                                       identifier as the
+                                                       default namespace
+ -bs [ --buffer-size ] size                            sets the size of the
+                                                       buffers
+ -? [ --help ]                                         displays this help
+                                                       message
+
+Example: xml2rdf input.xml output.ttl
