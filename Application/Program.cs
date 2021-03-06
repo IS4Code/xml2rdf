@@ -167,6 +167,14 @@ namespace IS4.RDF.Converters.Application
                         default:
                             throw new InvalidOperationException("Unsupported Turtle syntax!");
                     }
+                case ResourceFormat.RdfXml:
+                    return new RdfXmlFormatter();
+                case ResourceFormat.JsonLd:
+                    goto default;
+                case ResourceFormat.Csv:
+                    return new CsvFormatter();
+                case ResourceFormat.Html:
+                    goto default;
                 default:
                     throw new ApplicationException("Unsupported output format!");
             }
@@ -177,19 +185,65 @@ namespace IS4.RDF.Converters.Application
             switch(format)
             {
                 case ResourceFormat.Turtle:
-                    return new CompressingTurtleWriter(TurtleSyntax)
-                    {
-                        PrettyPrintMode = true
-                    };
+                    return new CompressingTurtleWriter(TurtleSyntax);
+                case ResourceFormat.RdfXml:
+                    return new RdfXmlWriter();
+                case ResourceFormat.JsonLd:
+                    return new StoreRdfWriter(new JsonLdWriter());
+                case ResourceFormat.Csv:
+                    return new CsvWriter();
+                case ResourceFormat.Html:
+                    return new HtmlWriter();
                 default:
                     throw new ApplicationException("Unsupported output format!");
+            }
+        }
+
+        class StoreRdfWriter : IRdfWriter
+        {
+            readonly IStoreWriter storeWriter;
+
+            public event RdfWriterWarning Warning {
+                add {
+                    storeWriter.Warning += value.Invoke;
+                }
+                remove {
+                    storeWriter.Warning -= value.Invoke;
+                }
+            }
+
+            ITripleStore GetStore(IGraph graph)
+            {
+                var store = new TripleStore();
+                store.Add(graph);
+                return store;
+            }
+
+            public void Save(IGraph g, string filename)
+            {
+                storeWriter.Save(GetStore(g), filename);
+            }
+
+            public void Save(IGraph g, TextWriter output)
+            {
+                storeWriter.Save(GetStore(g), output);
+            }
+
+            public void Save(IGraph g, TextWriter output, bool leaveOpen)
+            {
+                storeWriter.Save(GetStore(g), output, leaveOpen);
+            }
+
+            public StoreRdfWriter(IStoreWriter storeWriter)
+            {
+                this.storeWriter = storeWriter;
             }
         }
 
         private void StructuredToGraph(IEnumerable<Resource> input, Resource output)
         {
             ValidateMask(input, ResourceFormat.StructuredMask);
-
+            
             if(Streaming)
             {
                 var formatter = GetFormatter(output.Format);
@@ -200,6 +254,10 @@ namespace IS4.RDF.Converters.Application
                 }
             }else{
                 var rdfWriter = GetWriter(output.Format);
+                if(rdfWriter is IPrettyPrintingWriter prettyWriter)
+                {
+                    prettyWriter.PrettyPrintMode = true;
+                }
                 var graph = new Graph();
                 StructuredHandleInputs(input, new GraphHandler(graph));
                 using(var writer = new StreamWriter(OpenOutput(output.TargetPath)))
@@ -306,7 +364,12 @@ namespace IS4.RDF.Converters.Application
                 {
                     case "xml": return ResourceFormat.Xml;
                     case "ttl": return ResourceFormat.Turtle;
-                    default: throw new ArgumentException("Unknown argument format. Supported formats are xml and ttl.", nameof(argument));
+                    case "jsonld": return ResourceFormat.JsonLd;
+                    case "rdfxml":
+                    case "rdf+xml": return ResourceFormat.RdfXml;
+                    case "csv": return ResourceFormat.Csv;
+                    case "html": return ResourceFormat.Html;
+                    default: throw new ArgumentException("Unknown argument format. Supported formats are xml, ttl, jsonld, rdf+xml, csv, html.", nameof(argument));
                 }
             }
         }
@@ -314,11 +377,15 @@ namespace IS4.RDF.Converters.Application
         [Flags]
         public enum ResourceFormat
         {
-            Xml = 1,
-            StructuredMask = 15,
+            Turtle = 1,
+            RdfXml = 2,
+            JsonLd = 4,
+            Html = 8,
+            Csv = 16,
+            GraphMask = 255,
 
-            Turtle = 16,
-            GraphMask = 240,
+            Xml = 256,
+            StructuredMask = 65280,
         }
 
 #if DEBUG
