@@ -125,7 +125,12 @@ namespace IS4.RDF.Converters
                     case XPathNodeType.Namespace:
                         return Navigator.MoveToNextNamespace() || (Navigator.MoveToParent() && Navigator.MoveToFirstAttribute());
                     default:
-                        return Navigator.MoveToNextAttribute();
+                        if(!Navigator.MoveToNextAttribute())
+                        {
+                            Navigator.MoveToParent();
+                            return false;
+                        }
+                        return true;
                 }
             }
 
