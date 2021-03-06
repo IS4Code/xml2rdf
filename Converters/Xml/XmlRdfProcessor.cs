@@ -35,6 +35,10 @@ namespace IS4.RDF.Converters.Xml
             ProcessingInstructionMapping["xml-stylesheet"] = xmlNSUri;
 
             rdf.StartRdf();
+
+            rdf.HandleNamespace("rdf", new Uri(rdfNS));
+            rdf.HandleNamespace("rdfs", new Uri(rdfsNS));
+            rdf.HandleNamespace("xsd", new Uri(xsdNS));
         }
 
         void IDisposable.Dispose()

@@ -153,7 +153,7 @@ namespace IS4.RDF.Converters.Application
             }
         }
 
-        private ITripleFormatter GetFormatter(ResourceFormat format)
+        private ITripleFormatter GetFormatter(ResourceFormat format, INamespaceMapper namespaceMapper)
         {
             switch(format)
             {
@@ -161,9 +161,9 @@ namespace IS4.RDF.Converters.Application
                     switch(TurtleSyntax)
                     {
                         case TurtleSyntax.Original:
-                            return new TurtleFormatter();
+                            return namespaceMapper == null ? new TurtleFormatter() : new TurtleFormatter(namespaceMapper);
                         case TurtleSyntax.W3C:
-                            return new TurtleW3CFormatter();
+                            return namespaceMapper == null ? new TurtleW3CFormatter() : new TurtleW3CFormatter(namespaceMapper);
                         default:
                             throw new InvalidOperationException("Unsupported Turtle syntax!");
                     }
@@ -240,16 +240,33 @@ namespace IS4.RDF.Converters.Application
             }
         }
 
+        class NamespaceWriteThroughHandler : WriteThroughHandler
+        {
+            readonly INamespaceMapper namespaceMapper;
+
+            public NamespaceWriteThroughHandler(ITripleFormatter formatter, INamespaceMapper namespaceMapper, TextWriter writer) : base(formatter, writer)
+            {
+                this.namespaceMapper = namespaceMapper;
+            }
+
+            protected override bool HandleNamespaceInternal(string prefix, Uri namespaceUri)
+            {
+                namespaceMapper.AddNamespace(prefix, namespaceUri);
+                return base.HandleNamespaceInternal(prefix, namespaceUri);
+            }
+        }
+
         private void StructuredToGraph(IEnumerable<Resource> input, Resource output)
         {
             ValidateMask(input, ResourceFormat.StructuredMask);
             
             if(Streaming)
             {
-                var formatter = GetFormatter(output.Format);
+                var namespaceMapper = new NamespaceMapper();
+                var formatter = GetFormatter(output.Format, namespaceMapper);
                 using(var writer = new StreamWriter(OpenOutput(output.TargetPath)))
                 {
-                    var handler = new WriteThroughHandler(formatter, writer);
+                    var handler = new NamespaceWriteThroughHandler(formatter, namespaceMapper, writer);
                     StructuredHandleInputs(input, handler);
                 }
             }else{
