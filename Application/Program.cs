@@ -10,14 +10,16 @@ using System.Xml;
 using System.Xml.Schema;
 using VDS.RDF;
 using VDS.RDF.Parsing;
+using VDS.RDF.Parsing.Handlers;
 using VDS.RDF.Writing;
+using VDS.RDF.Writing.Formatting;
 
 namespace IS4.RDF.Converters.Application
 {
     public class Program
     {
         public int? BufferSize { get; set; }
-        public bool? Quiet { get; set; }
+        public bool Quiet { get; set; }
         public List<Resource> Resources { get; } = new List<Resource>();
         public XmlResolver InputXmlResolver { get; set; } = new XmlUrlResolver();
         public XmlResolver ProcessingXmlResolver { get; set; }
@@ -29,11 +31,12 @@ namespace IS4.RDF.Converters.Application
         };
         public XmlWriterSettings XmlWriterSettings { get; } = new XmlWriterSettings();
         public WhitespaceHandling WhitespaceHandling { get; set; } = WhitespaceHandling.Significant;
-        public bool? ExportDefault { get; set; }
-        public bool? UsePublic { get; set; }
+        public bool ExportDefault { get; set; }
+        public bool UsePublic { get; set; }
         public RdfBrowsingMethod OutputRdfBrowsingMethod { get; set; }
         public TurtleSyntax TurtleSyntax { get; set; } = TurtleSyntax.W3C;
         public string BaseUri { get; set; }
+        public bool Streaming { get; set; }
 
         public void Run()
         {
@@ -123,19 +126,16 @@ namespace IS4.RDF.Converters.Application
             }
         }
 
-        private void StructuredToGraph(IEnumerable<Resource> input, Resource output)
+        private void StructuredHandleInputs(IEnumerable<Resource> input, IRdfHandler handler)
         {
-            ValidateMask(input, ResourceFormat.StructuredMask);
-
-            var graph = new Graph();
             var converter = new XmlNodeConverter();
             foreach(var file in input)
             {
-                using(var processor = new XmlRdfProcessor(graph, ProcessingXmlResolver as XmlPlaceholderResolver)
+                using(var processor = new XmlRdfProcessor(handler, ProcessingXmlResolver as XmlPlaceholderResolver)
                 {
                     WhitespaceHandling = WhitespaceHandling,
-                    ExportDefault = ExportDefault ?? false,
-                    UseDtdAsDefaultNamespace = UsePublic ?? true
+                    ExportDefault = ExportDefault,
+                    UseDtdAsDefaultNamespace = UsePublic
                 })
                 {
                     switch(file.Format)
@@ -151,22 +151,61 @@ namespace IS4.RDF.Converters.Application
                     }
                 }
             }
+        }
 
-            IRdfWriter rdfWriter;
-            switch(output.Format)
+        private ITripleFormatter GetFormatter(ResourceFormat format)
+        {
+            switch(format)
             {
                 case ResourceFormat.Turtle:
-                    rdfWriter = new CompressingTurtleWriter(TurtleSyntax)
+                    switch(TurtleSyntax)
                     {
-                        PrettyPrintMode = true
-                    };
-                    break;
+                        case TurtleSyntax.Original:
+                            return new TurtleFormatter();
+                        case TurtleSyntax.W3C:
+                            return new TurtleW3CFormatter();
+                        default:
+                            throw new InvalidOperationException("Unsupported Turtle syntax!");
+                    }
                 default:
                     throw new ApplicationException("Unsupported output format!");
             }
-            using(var writer = new StreamWriter(OpenOutput(output.TargetPath)))
+        }
+
+        private IRdfWriter GetWriter(ResourceFormat format)
+        {
+            switch(format)
             {
-                graph.SaveToStream(writer, rdfWriter);
+                case ResourceFormat.Turtle:
+                    return new CompressingTurtleWriter(TurtleSyntax)
+                    {
+                        PrettyPrintMode = true
+                    };
+                default:
+                    throw new ApplicationException("Unsupported output format!");
+            }
+        }
+
+        private void StructuredToGraph(IEnumerable<Resource> input, Resource output)
+        {
+            ValidateMask(input, ResourceFormat.StructuredMask);
+
+            if(Streaming)
+            {
+                var formatter = GetFormatter(output.Format);
+                using(var writer = new StreamWriter(OpenOutput(output.TargetPath)))
+                {
+                    var handler = new WriteThroughHandler(formatter, writer);
+                    StructuredHandleInputs(input, handler);
+                }
+            }else{
+                var rdfWriter = GetWriter(output.Format);
+                var graph = new Graph();
+                StructuredHandleInputs(input, new GraphHandler(graph));
+                using(var writer = new StreamWriter(OpenOutput(output.TargetPath)))
+                {
+                    rdfWriter.Save(graph, writer);
+                }
             }
         }
 
@@ -342,6 +381,7 @@ namespace IS4.RDF.Converters.Application
                     {"ts", "turtle-syntax", FormatEnum(typeof(TurtleSyntax), " / "), "sets supported Turtle syntax"},
                     {"ed", "export-default", null, "exports default attributes"},
                     {"up", "use-public", null, "uses DTD PUBLIC identifier as the default namespace"},
+                    {"st", "streaming", null, "produce RDF output in streaming fashion"},
                     {"bs", "buffer-size", "size", "sets the size of the buffers"},
                     {"?", "help", null, "displays this help message"},
                 };
@@ -383,7 +423,7 @@ namespace IS4.RDF.Converters.Application
                         return OptionArgument.Required;
                     case "q":
                     case "quiet":
-                        if(Program.Quiet != null)
+                        if(Program.Quiet)
                         {
                             throw OptionAlreadySpecified(option);
                         }
@@ -392,7 +432,7 @@ namespace IS4.RDF.Converters.Application
                         return OptionArgument.None;
                     case "ed":
                     case "export-default":
-                        if(Program.ExportDefault != null)
+                        if(Program.ExportDefault)
                         {
                             throw OptionAlreadySpecified(option);
                         }
@@ -400,7 +440,7 @@ namespace IS4.RDF.Converters.Application
                         return OptionArgument.None;
                     case "up":
                     case "use-public":
-                        if(Program.UsePublic != null)
+                        if(Program.UsePublic)
                         {
                             throw OptionAlreadySpecified(option);
                         }
@@ -409,6 +449,14 @@ namespace IS4.RDF.Converters.Application
                         {
                             Program.XmlReaderSettings.DtdProcessing = DtdProcessing.Parse;
                         }
+                        return OptionArgument.None;
+                    case "st":
+                    case "streaming":
+                        if(Program.Streaming)
+                        {
+                            throw OptionAlreadySpecified(option);
+                        }
+                        Program.Streaming = true;
                         return OptionArgument.None;
                     case "?":
                     case "help":
