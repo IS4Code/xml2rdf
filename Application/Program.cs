@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Xml;
 using System.Xml.Schema;
+using System.Xml.XPath;
 using VDS.RDF;
 using VDS.RDF.Parsing;
 using VDS.RDF.Parsing.Handlers;
@@ -27,13 +28,13 @@ namespace IS4.RDF.Converters.Application
         {
             DtdProcessing = DtdProcessing.Ignore,
             ValidationFlags = XmlSchemaValidationFlags.ProcessIdentityConstraints | XmlSchemaValidationFlags.ProcessInlineSchema | XmlSchemaValidationFlags.ProcessSchemaLocation | XmlSchemaValidationFlags.ReportValidationWarnings,
-            XmlResolver = new XmlPlaceholderResolver()
+            XmlResolver = new XmlPlaceholderResolver(),
+            IgnoreWhitespace = false
         };
         public XmlWriterSettings XmlWriterSettings { get; } = new XmlWriterSettings();
         public WhitespaceHandling WhitespaceHandling { get; set; } = WhitespaceHandling.Significant;
         public bool ExportDefault { get; set; }
         public bool UsePublic { get; set; }
-        public RdfBrowsingMethod OutputRdfBrowsingMethod { get; set; }
         public TurtleSyntax TurtleSyntax { get; set; } = TurtleSyntax.W3C;
         public string BaseUri { get; set; }
         public bool Streaming { get; set; }
@@ -128,7 +129,6 @@ namespace IS4.RDF.Converters.Application
 
         private void StructuredHandleInputs(IEnumerable<Resource> input, IRdfHandler handler)
         {
-            var converter = new XmlNodeConverter();
             foreach(var file in input)
             {
                 using(var processor = new XmlRdfProcessor(handler, ProcessingXmlResolver as XmlPlaceholderResolver)
@@ -138,16 +138,20 @@ namespace IS4.RDF.Converters.Application
                     UseDtdAsDefaultNamespace = UsePublic
                 })
                 {
-                    switch(file.Format)
+                    using(var reader = XmlReader.Create(OpenInput(file.TargetPath), XmlReaderSettings, GetBaseUri(file.TargetPath)))
                     {
-                        case ResourceFormat.Xml:
-                            using(var reader = XmlReader.Create(OpenInput(file.TargetPath), XmlReaderSettings, GetBaseUri(file.TargetPath)))
-                            {
-                                converter.Convert(reader, processor);
-                            }
-                            break;
-                        default:
-                            throw new ApplicationException("Unsupported input format!");
+                        switch(file.Format)
+                        {
+                            case ResourceFormat.Xml:
+                                new XmlNodeConverter().Convert(reader, processor);
+                                break;
+                            case ResourceFormat.XmlXPath:
+                                var document = new XPathDocument(reader, XmlSpace.Preserve);
+                                new XPathNodeConverter().Convert(document, processor);
+                                break;
+                            default:
+                                throw new ApplicationException("Unsupported input format!");
+                        }
                     }
                 }
             }
@@ -373,38 +377,25 @@ namespace IS4.RDF.Converters.Application
                 }
             }
 
-            switch(output.Format)
+            var root = graph.CreateUriNode(new Uri(GetBaseUri(output.TargetPath)));
+            if(!graph.GetTriplesWithSubject(root).Any())
             {
-                case ResourceFormat.Xml:
-                    using(var writer = XmlWriter.Create(OpenOutput(output.TargetPath), XmlWriterSettings))
-                    {
-                        var root = graph.CreateUriNode(new Uri(GetBaseUri(output.TargetPath)));
-                        if(!graph.GetTriplesWithSubject(root).Any())
-                        {
-                            throw new ApplicationException("Base URI must refer to an existing root!");
-                        }
-                        switch(OutputRdfBrowsingMethod)
-                        {
-                            case RdfBrowsingMethod.Writer:
-                                new RdfXmlConverter(graph).Write(writer, root);
-                                break;
-                            case RdfBrowsingMethod.Navigator:
-                                new RdfXPathNavigator(graph, root).WriteSubtree(writer);
-                                break;
-                            default:
-                                throw new ApplicationException("Unsupported output method!");
-                        }
-                    }
-                    break;
-                default:
-                    throw new ApplicationException("Unsupported output format!");
+                throw new ApplicationException("Base URI must refer to an existing root!");
             }
-        }
-
-        public enum RdfBrowsingMethod
-        {
-            Writer,
-            Navigator
+            using(var writer = XmlWriter.Create(OpenOutput(output.TargetPath), XmlWriterSettings))
+            {
+                switch(output.Format)
+                {
+                    case ResourceFormat.Xml:
+                        new RdfXmlConverter(graph).Write(writer, root);
+                        break;
+                    case ResourceFormat.XmlXPath:
+                        new RdfXPathNavigator(graph, root).WriteSubtree(writer);
+                        break;
+                    default:
+                        throw new ApplicationException("Unsupported output format!");
+                }
+            }
         }
 
         public class Resource
@@ -412,6 +403,7 @@ namespace IS4.RDF.Converters.Application
             static readonly Dictionary<string, ResourceFormat> resourceTypes = new Dictionary<string, ResourceFormat>(StringComparer.OrdinalIgnoreCase)
             {
                 { "xml", ResourceFormat.Xml },
+                { "xpath", ResourceFormat.XmlXPath },
 
                 { "rdf", ResourceFormat.RdfGeneric },
                 { "ttl", ResourceFormat.Turtle },
@@ -485,6 +477,7 @@ namespace IS4.RDF.Converters.Application
             GraphMask = 255,
 
             Xml = 256,
+            XmlXPath = 512,
             StructuredMask = 65280,
         }
 
@@ -544,7 +537,6 @@ namespace IS4.RDF.Converters.Application
                     {"d", "dtd", FormatEnum(typeof(DtdProcessing), " / "), "sets input DTD processing"},
                     {"w", "whitespace", FormatEnum(typeof(WhitespaceHandling), " / "), "sets input whitespace handling"},
                     {"v", "validation", FormatEnum(typeof(ValidationType), " / "), "sets input validation"},
-                    {"om", "output-method", FormatEnum(typeof(RdfBrowsingMethod), " / "), "sets output XML method"},
                     {"ts", "turtle-syntax", FormatEnum(typeof(TurtleSyntax), " / "), "sets supported Turtle syntax"},
                     {"ed", "export-default", null, "exports default attributes"},
                     {"up", "use-public", null, "uses DTD PUBLIC identifier as the default namespace"},
@@ -680,10 +672,6 @@ namespace IS4.RDF.Converters.Application
                     case "v":
                     case "validation":
                         Program.XmlReaderSettings.ValidationType = ParseEnum<ValidationType>(argument);
-                        break;
-                    case "om":
-                    case "output-method":
-                        Program.OutputRdfBrowsingMethod = ParseEnum<RdfBrowsingMethod>(argument);
                         break;
                     case "turtle-syntax":
                         Program.TurtleSyntax = ParseEnum<TurtleSyntax>(argument);
