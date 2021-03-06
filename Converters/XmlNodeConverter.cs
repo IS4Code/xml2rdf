@@ -6,6 +6,9 @@ using System.Xml.Schema;
 
 namespace IS4.RDF.Converters
 {
+    /// <summary>
+    /// Converts XML data from an instance of <see cref="XmlReader"/>.
+    /// </summary>
     public class XmlNodeConverter : INodeConverter<XmlReader>
     {
         public bool UseReflection { get; set; } = true;

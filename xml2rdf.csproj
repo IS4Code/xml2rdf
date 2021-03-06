@@ -10,6 +10,7 @@
     <Company />
     <Product />
     <Version>0.1.0</Version>
+    <RootNamespace>IS4.RDF</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

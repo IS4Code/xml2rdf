@@ -9,6 +9,9 @@ using VDS.RDF;
 
 namespace IS4.RDF.Converters
 {
+    /// <summary>
+    /// Provides access to an RDF graph via XPath as a <see cref="XPathNavigator"/>.
+    /// </summary>
     public sealed class RdfXPathNavigator : DocTypeXPathNavigator, IXmlProvider
     {
         readonly IGraph graph;
@@ -68,7 +71,7 @@ namespace IS4.RDF.Converters
 
         Uri IBaseUriProvider.BaseUri => cursor.BaseUri;
 
-        bool IXmlAttributeProvider.IsDefault => cursor.IsDefault;
+        bool IXmlAttributeIterator.IsDefault => cursor.IsDefault;
 
         XmlQualifiedName IXmlNameProvider.QualifiedName => cursor.QualifiedName;
 
@@ -435,8 +438,6 @@ namespace IS4.RDF.Converters
 
             public T Current => Nodes[Position];
 
-            public override object UnderlyingObject => Current;
-
             public ListCursor(Context context, Cursor parent, IReadOnlyList<T> nodes, int position) : base(context, parent)
             {
                 Nodes = nodes;
@@ -466,6 +467,8 @@ namespace IS4.RDF.Converters
 
         class NodeCursor : ListCursor<NodeCursor.NodeInfo>
         {
+            public override object UnderlyingObject => Current.Node;
+
             public override XPathNodeType NodeType => Current.Type;
 
             public override XmlQualifiedName QualifiedName => GetType(Current.Node);
@@ -611,6 +614,8 @@ namespace IS4.RDF.Converters
 
         class AttributeCursor : ListCursor<AttributeCursor.AttributeInfo>
         {
+            public override object UnderlyingObject => Current.Values;
+
             public override XPathNodeType NodeType => XPathNodeType.Attribute;
 
             public override XmlQualifiedName QualifiedName => Current.QualifiedName;

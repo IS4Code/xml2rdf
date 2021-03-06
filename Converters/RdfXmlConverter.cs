@@ -9,7 +9,10 @@ using VDS.RDF;
 
 namespace IS4.RDF.Converters
 {
-    public class RdfXmlConverter : ProcessorBase
+    /// <summary>
+    /// Converts RDF nodes represented by <see cref="INode"/> to XML.
+    /// </summary>
+    public sealed class RdfXmlConverter : ProcessorBase, ITripleConverter<INode>
     {
         readonly IGraph graph;
 

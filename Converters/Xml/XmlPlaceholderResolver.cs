@@ -5,17 +5,20 @@ using System.Xml;
 
 namespace IS4.RDF.Converters.Xml
 {
+    /// <summary>
+    /// Resolves all external entities as a single processing instruction with a unique target.
+    /// </summary>
     public class XmlPlaceholderResolver : XmlResolver
     {
-        public string InstructionName { get; }
+        public string InstructionTarget { get; }
 
         readonly string resourcestring;
         readonly byte[] resource;
 
         public XmlPlaceholderResolver()
         {
-            InstructionName = $"entity{Guid.NewGuid():N}";
-            resourcestring = $"<?{InstructionName}?>";
+            InstructionTarget = $"entity{Guid.NewGuid():N}";
+            resourcestring = $"<?{InstructionTarget}?>";
             resource = Encoding.UTF8.GetBytes(resourcestring);
         }
 

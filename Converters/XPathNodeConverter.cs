@@ -7,6 +7,9 @@ using System.Xml.XPath;
 
 namespace IS4.RDF.Converters
 {
+    /// <summary>
+    /// Converts XML data from an instance of <see cref="IXPathNavigable"/> or <see cref="XPathNavigator"/>.
+    /// </summary>
     public class XPathNodeConverter : INodeConverter<IXPathNavigable>, INodeConverter<XPathNavigator>
     {
         public TNode Convert<TNode>(IXPathNavigable navigable, IXmlNodeProcessor<TNode> processor)

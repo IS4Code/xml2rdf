@@ -5,6 +5,9 @@ using VDS.RDF;
 
 namespace IS4.RDF.Converters
 {
+    /// <summary>
+    /// Provides internal support for classes that work with RDF.
+    /// </summary>
     public abstract class ProcessorBase
     {
         internal static readonly Uri xmlNSUri = new Uri("http://www.w3.org/XML/1998/namespace");

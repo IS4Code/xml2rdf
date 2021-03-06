@@ -3,11 +3,17 @@ using System.Xml;
 
 namespace IS4.RDF.Converters.Xml
 {
+    /// <summary>
+    /// Provides the base URI of a node.
+    /// </summary>
     public interface IBaseUriProvider
     {
         Uri BaseUri { get; }
     }
 
+    /// <summary>
+    /// Provides the qualified name of an XML node.
+    /// </summary>
     public interface IXmlNameProvider
     {
         XmlQualifiedName QualifiedName { get; }
@@ -17,6 +23,9 @@ namespace IS4.RDF.Converters.Xml
         string Prefix { get; }
     }
 
+    /// <summary>
+    /// Provides the typed XML value of a node.
+    /// </summary>
     public interface IXmlValueProvider
     {
         XmlQualifiedName TypeName { get; }
@@ -24,18 +33,27 @@ namespace IS4.RDF.Converters.Xml
         bool IsEmpty { get; }
     }
 
+    /// <summary>
+    /// Provides the language of a node.
+    /// </summary>
     public interface ILanguageProvider
     {
         string Language { get; }
     }
 
-    public interface IXmlAttributeProvider : IXmlNameProvider, IXmlValueProvider
+    /// <summary>
+    /// Provides support for iterating through attributes.
+    /// </summary>
+    public interface IXmlAttributeIterator : IXmlNameProvider, IXmlValueProvider
     {
         bool MoveToNextAttribute();
         bool IsDefault { get; }
     }
 
-    public interface IXmlProvider : ILanguageProvider, IXmlNameProvider, IXmlValueProvider, IBaseUriProvider, IXmlAttributeProvider, IXmlNamespaceResolver
+    /// <summary>
+    /// Provides the necessary support for inspecting a node in the XML infoset.
+    /// </summary>
+    public interface IXmlProvider : ILanguageProvider, IXmlNameProvider, IXmlValueProvider, IBaseUriProvider, IXmlAttributeIterator, IXmlNamespaceResolver
     {
 
     }

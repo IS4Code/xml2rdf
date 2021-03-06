@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Xml;
 using VDS.RDF;
 using VDS.RDF.Parsing.Handlers;
 
 namespace IS4.RDF.Converters.Xml
 {
+    /// <summary>
+    /// Converts XML nodes into instances of <see cref="INode"/>.
+    /// </summary>
     public class XmlRdfProcessor : ProcessorBase, IXmlNodeProcessor<INode>
     {
         readonly IRdfHandler rdf;
@@ -30,7 +32,7 @@ namespace IS4.RDF.Converters.Xml
         public XmlRdfProcessor(IRdfHandler rdfHandler, XmlPlaceholderResolver entityResolver = null) : base(rdfHandler)
         {
             rdf = rdfHandler;
-            linkName = entityResolver?.InstructionName;
+            linkName = entityResolver?.InstructionTarget;
 
             ProcessingInstructionMapping["xml-stylesheet"] = xmlNSUri;
 
@@ -46,7 +48,7 @@ namespace IS4.RDF.Converters.Xml
             rdf.EndRdf(true);
         }
 
-        INode IXmlNodeProcessor<INode>.ProcessDocument<TProvider>(TProvider provider, Func<INode, IEnumerator<INode>> content)
+        INode IXmlNodeProcessor<INode>.ProcessDocument<TProvider>(TProvider provider, ContentIterator<INode> content)
         {
             var baseNode = MakeUriNode(provider.BaseUri);
             rdf.HandleTriple(baseNode, value, MakeList(content(baseNode)) ?? nil);
@@ -143,7 +145,7 @@ namespace IS4.RDF.Converters.Xml
             public IUriNode DataType;
         }
 
-        INode IXmlNodeProcessor<INode>.ProcessElement<TProvider>(TProvider provider, INode baseNode, Uri originalBaseUri, INode defaultNamespace, Func<INode, IEnumerator<INode>> content)
+        INode IXmlNodeProcessor<INode>.ProcessElement<TProvider>(TProvider provider, INode baseNode, Uri originalBaseUri, INode defaultNamespace, ContentIterator<INode> content)
         {
             var empty = provider.IsEmpty;
             bool sameBase = provider.BaseUri == originalBaseUri;
