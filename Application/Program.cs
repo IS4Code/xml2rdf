@@ -284,6 +284,70 @@ namespace IS4.RDF.Converters.Application
             }
         }
 
+        class StoreRdfReader : IRdfReader
+        {
+            readonly IStoreReader storeReader;
+
+            public event RdfReaderWarning Warning {
+                add {
+                    storeReader.Warning += value.Invoke;
+                }
+                remove {
+                    storeReader.Warning -= value.Invoke;
+                }
+            }
+
+            public void Load(IGraph g, StreamReader input)
+            {
+                storeReader.Load(new GraphHandler(g), input);
+            }
+
+            public void Load(IGraph g, TextReader input)
+            {
+                storeReader.Load(new GraphHandler(g), input);
+            }
+
+            public void Load(IGraph g, string filename)
+            {
+                storeReader.Load(new GraphHandler(g), filename);
+            }
+
+            public void Load(IRdfHandler handler, StreamReader input)
+            {
+                storeReader.Load(handler, input);
+            }
+
+            public void Load(IRdfHandler handler, TextReader input)
+            {
+                storeReader.Load(handler, input);
+            }
+
+            public void Load(IRdfHandler handler, string filename)
+            {
+                storeReader.Load(handler, filename);
+            }
+
+            public StoreRdfReader(IStoreReader storeReader)
+            {
+                this.storeReader = storeReader;
+            }
+        }
+
+        private IRdfReader GetReader(ResourceFormat format)
+        {
+            switch(format)
+            {
+                case ResourceFormat.Turtle:
+                    return new TurtleParser(TurtleSyntax);
+                case ResourceFormat.RdfXml:
+                    return new RdfXmlParser();
+                case ResourceFormat.JsonLd:
+                    return new StoreRdfReader(new JsonLdParser());
+                default:
+                    throw new ApplicationException("Unsupported input format!");
+            }
+        }
+
         private void GraphToStructured(IEnumerable<Resource> input, Resource output)
         {
             ValidateMask(input, ResourceFormat.GraphMask);
@@ -291,20 +355,21 @@ namespace IS4.RDF.Converters.Application
             var graph = new Graph();
             foreach(var file in input)
             {
-                IRdfReader rdfReader;
-                switch(file.Format)
+                if(file.Format == ResourceFormat.RdfGeneric)
                 {
-                    case ResourceFormat.Turtle:
-                        rdfReader = new TurtleParser(TurtleSyntax);
-                        break;
-                    default:
-                        throw new ApplicationException("Unsupported input format!");
-                }
-                using(var reader = new StreamReader(OpenInput(file.TargetPath), true))
-                {
-                    var baseUri = GetBaseUri(file.TargetPath);
-                    graph.BaseUri = baseUri != null ? new Uri(baseUri) : null;
-                    rdfReader.Load(graph, reader);
+                    if(file.TargetPath == null)
+                    {
+                        throw new ApplicationException("Standard input resource must have a concrete format specified.");
+                    }
+                    UriLoader.Load(graph, ResolveUri(file.TargetPath));
+                }else{
+                    var rdfReader = GetReader(file.Format);
+                    using(var reader = new StreamReader(OpenInput(file.TargetPath), true))
+                    {
+                        var baseUri = GetBaseUri(file.TargetPath);
+                        graph.BaseUri = baseUri != null ? new Uri(baseUri) : null;
+                        rdfReader.Load(graph, reader);
+                    }
                 }
             }
 
@@ -344,6 +409,24 @@ namespace IS4.RDF.Converters.Application
 
         public class Resource
         {
+            static readonly Dictionary<string, ResourceFormat> resourceTypes = new Dictionary<string, ResourceFormat>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "xml", ResourceFormat.Xml },
+
+                { "rdf", ResourceFormat.RdfGeneric },
+                { "ttl", ResourceFormat.Turtle },
+                { "jsonld", ResourceFormat.JsonLd },
+                { "rdfxml", ResourceFormat.RdfXml },
+                { "rdf+xml", ResourceFormat.RdfXml },
+                { "csv", ResourceFormat.Csv },
+                { "html", ResourceFormat.Html }
+            };
+
+            static readonly HashSet<string> standardPaths = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "-", "php://stdin", "php://stdout", "file:///dev/fd/0", "file:///dev/fd/1"
+            };
+
             public ResourceFormat Format { get; }
             public string TargetPath { get; }
 
@@ -353,41 +436,40 @@ namespace IS4.RDF.Converters.Application
                 TargetPath = path;
             }
 
-            public Resource(string argument) : this(ExtractFormat(ref argument), argument)
+            public Resource(string argument) : this(ParsePath(ref argument), argument)
             {
 
             }
 
-            private static ResourceFormat ExtractFormat(ref string argument)
+            private static ResourceFormat ParsePath(ref string argument)
             {
-                string format;
-                if(argument.StartsWith("xml:", StringComparison.OrdinalIgnoreCase) || argument.StartsWith("ttl:", StringComparison.OrdinalIgnoreCase))
-                {
-                    format = argument.Substring(0, 3);
-                    argument = argument.Substring(4);
-                }else{
-                    format = Path.GetExtension(argument);
-                    if(String.IsNullOrWhiteSpace(format))
-                    {
-                        throw new ArgumentException("Cannot extract format info from the argument. Please add xml: or ttl: at the beginning.", nameof(argument));
-                    }
-                    format = format.TrimStart('.');
-                }
-                if(argument == "-" || argument == "php://stdin" || argument == "php://stdout")
+                var format = ExtractFormat(ref argument);
+                if(standardPaths.Contains(argument))
                 {
                     argument = null;
                 }
-                switch(format.ToLowerInvariant())
+                return format;
+            }
+
+            private static ResourceFormat ExtractFormat(ref string argument)
+            {
+                int colon = argument.IndexOf(':');
+                if(colon != -1 && resourceTypes.TryGetValue(argument.Substring(0, colon), out var resourceFormat))
                 {
-                    case "xml": return ResourceFormat.Xml;
-                    case "ttl": return ResourceFormat.Turtle;
-                    case "jsonld": return ResourceFormat.JsonLd;
-                    case "rdfxml":
-                    case "rdf+xml": return ResourceFormat.RdfXml;
-                    case "csv": return ResourceFormat.Csv;
-                    case "html": return ResourceFormat.Html;
-                    default: throw new ArgumentException("Unknown argument format. Supported formats are xml, ttl, jsonld, rdf+xml, csv, html.", nameof(argument));
+                    argument = argument.Substring(colon + 1);
+                    return resourceFormat;
                 }
+                var format = Path.GetExtension(argument);
+                if(String.IsNullOrWhiteSpace(format))
+                {
+                    throw new ArgumentException($"Cannot extract format info from the argument. Please add one of {String.Concat(", ", resourceTypes.Keys.Select(k => k + ":"))} at the beginning.", nameof(argument));
+                }
+                format = format.TrimStart('.');
+                if(!resourceTypes.TryGetValue(format, out resourceFormat))
+                {
+                    throw new ArgumentException($"Unknown argument format '{format}'. Supported formats are {String.Concat(", ", resourceTypes.Keys)}.", nameof(argument));
+                }
+                return resourceFormat;
             }
         }
 
@@ -399,6 +481,7 @@ namespace IS4.RDF.Converters.Application
             JsonLd = 4,
             Html = 8,
             Csv = 16,
+            RdfGeneric = 32,
             GraphMask = 255,
 
             Xml = 256,
