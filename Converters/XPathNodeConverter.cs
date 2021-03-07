@@ -12,6 +12,8 @@ namespace IS4.RDF.Converters
     /// </summary>
     public class XPathNodeConverter : INodeConverter<IXPathNavigable>, INodeConverter<XPathNavigator>
     {
+        public bool ExposeNamespaceNodes { get; set; }
+
         public TNode Convert<TNode>(IXPathNavigable navigable, IXmlNodeProcessor<TNode> processor)
         {
             return Convert(navigable.CreateNavigator(), processor);
@@ -36,7 +38,7 @@ namespace IS4.RDF.Converters
 
         private TNode XPathValue<TNode>(IXmlNodeProcessor<TNode> processor, XPathNavigator navigator, TNode baseNode, Uri originalBaseUri, TNode defaultNamespace)
         {
-            var wrapper = new XPathNavigatorWrapper(navigator);
+            var wrapper = new XPathNavigatorWrapper(navigator, ExposeNamespaceNodes);
             switch(navigator.NodeType)
             {
                 case XPathNodeType.Root:
@@ -70,10 +72,12 @@ namespace IS4.RDF.Converters
         struct XPathNavigatorWrapper : IXmlProvider
         {
             public XPathNavigator Navigator { get; }
+            readonly bool exposeNamespaces;
 
-            public XPathNavigatorWrapper(XPathNavigator navigator)
+            public XPathNavigatorWrapper(XPathNavigator navigator, bool exposeNamespaces)
             {
                 Navigator = navigator;
+                this.exposeNamespaces = exposeNamespaces;
             }
 
             public string Language => Navigator.XmlLang;
@@ -82,15 +86,27 @@ namespace IS4.RDF.Converters
 
             public bool IsDefault => false;
 
-            public XmlQualifiedName QualifiedName => new XmlQualifiedName(Navigator.LocalName, Navigator.NamespaceURI);
+            public XmlQualifiedName QualifiedName =>
+                Navigator.NodeType == XPathNodeType.Namespace ?
+                String.IsNullOrEmpty(Navigator.Name) ? new XmlQualifiedName("xmlns", "http://www.w3.org/2000/xmlns/") : new XmlQualifiedName(Navigator.Name, "http://www.w3.org/2000/xmlns/") :
+                new XmlQualifiedName(Navigator.LocalName, Navigator.NamespaceURI);
 
-            public string LocalName => Navigator.LocalName;
+            public string LocalName =>
+                Navigator.NodeType == XPathNodeType.Namespace && String.IsNullOrEmpty(Navigator.Name) ?
+                "xmlns" :
+                Navigator.LocalName;
 
-            public string PrefixedName => Navigator.Name;
+            public string PrefixedName =>
+                Navigator.NodeType == XPathNodeType.Namespace ?
+                String.IsNullOrEmpty(Navigator.Name) ? "xmlns" : "xmlns:" + Navigator.Name :
+                Navigator.Name;
 
-            public Uri Namespace => String.IsNullOrEmpty(Navigator.NamespaceURI) ? null : new Uri(Navigator.NamespaceURI);
+            public Uri Namespace =>
+                Navigator.NodeType == XPathNodeType.Namespace ?
+                new Uri("http://www.w3.org/2000/xmlns/") :
+                String.IsNullOrEmpty(Navigator.NamespaceURI) ? null : new Uri(Navigator.NamespaceURI);
 
-            public string Prefix => Navigator.Prefix;
+            public string Prefix => Navigator.NodeType == XPathNodeType.Namespace && !String.IsNullOrEmpty(Navigator.Name) ? "xmlns" : Navigator.Prefix;
 
             public XmlQualifiedName TypeName {
                 get {
@@ -121,7 +137,7 @@ namespace IS4.RDF.Converters
                 switch(Navigator.NodeType)
                 {
                     case XPathNodeType.Element:
-                        return Navigator.MoveToFirstNamespace() || Navigator.MoveToFirstAttribute();
+                        return (exposeNamespaces && Navigator.MoveToFirstNamespace()) || Navigator.MoveToFirstAttribute();
                     case XPathNodeType.Namespace:
                         return Navigator.MoveToNextNamespace() || (Navigator.MoveToParent() && Navigator.MoveToFirstAttribute());
                     default:
