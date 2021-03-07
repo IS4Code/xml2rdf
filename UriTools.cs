@@ -101,7 +101,7 @@ namespace IS4.RDF
         {
             var kind = baseUri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative;
             var uriString = baseUri.GetString();
-            return new Uri(uriString + (uriString.IndexOf('#') != -1 ? "/" : "#") + Uri.EscapeDataString(component), kind);
+            return new Uri(uriString + (uriString.IndexOf('#') != -1 ? "/" : "#") + component, kind);
         }
 
         public static Uri GetNamespacePrefix(Uri uri)
@@ -123,7 +123,7 @@ namespace IS4.RDF
                 {
                     pos = 0;
                 }
-                component = uri.Fragment.Substring(pos + 1).Replace("%2F", "/");
+                component = uri.Fragment.Substring(pos + 1);
                 baseUri = new Uri(uri.OriginalString.Substring(0, uri.OriginalString.Length - (uri.Fragment.Length - pos)), uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative);
             }
             baseUri = null;
